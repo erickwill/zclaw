@@ -324,6 +324,13 @@ def call_api(
             headers["X-Title"] = os.environ.get("OPENROUTER_X_TITLE", "zclaw api tests")
 
         token_field, token_value = _openai_like_max_tokens_field(model)
+
+        if not messages or messages[0].get("role") != "system":
+            messages = [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                *messages,
+            ]
+
         payload = {
             "model": model,
             token_field: token_value,
