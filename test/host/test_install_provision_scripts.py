@@ -697,11 +697,14 @@ LAST_PORT=
                 check=False,
             )
 
-    def _run_openai_provision_capture_csv(
+    def _run_provision_capture_csv(
         self,
         *,
+        backend: str,
         assume_yes: bool,
         input_text: str = "",
+        api_key: str | None = None,
+        api_url: str | None = None,
     ) -> tuple[subprocess.CompletedProcess[str], str]:
         with tempfile.TemporaryDirectory() as td:
             tmp = Path(td)
@@ -747,10 +750,12 @@ LAST_PORT=
                 "--pass",
                 "password123",
                 "--backend",
-                "openai",
-                "--api-key",
-                "sk-test",
+                backend,
             ]
+            if api_key is not None:
+                cmd.extend(["--api-key", api_key])
+            if api_url is not None:
+                cmd.extend(["--api-url", api_url])
             if assume_yes:
                 cmd.insert(1, "--yes")
 
@@ -863,14 +868,54 @@ LAST_PORT=
         self.assertIn("Use 1-4 non-zero integers", output)
 
     def test_provision_interactive_openai_model_menu_accepts_curated_choice(self) -> None:
-        proc, captured_csv = self._run_openai_provision_capture_csv(
+        proc, captured_csv = self._run_provision_capture_csv(
+            backend="openai",
             assume_yes=False,
             input_text="3\ny\n\n\n",
+            api_key="sk-test",
         )
         output = f"{proc.stdout}\n{proc.stderr}"
         self.assertEqual(proc.returncode, 0, msg=output)
         self.assertIn("Select model for openai:", output)
         self.assertIn('llm_model,data,string,"gpt-4.1-mini"', captured_csv)
+
+    def test_provision_interactive_openai_model_menu_defaults_to_first_choice(self) -> None:
+        proc, captured_csv = self._run_provision_capture_csv(
+            backend="openai",
+            assume_yes=False,
+            input_text="\ny\n\n\n",
+            api_key="sk-test",
+        )
+        output = f"{proc.stdout}\n{proc.stderr}"
+        self.assertEqual(proc.returncode, 0, msg=output)
+        self.assertIn("Select model for openai:", output)
+        self.assertIn('llm_model,data,string,"gpt-5.4"', captured_csv)
+
+    def test_provision_interactive_openai_model_menu_accepts_custom_model(self) -> None:
+        proc, captured_csv = self._run_provision_capture_csv(
+            backend="openai",
+            assume_yes=False,
+            input_text="4\ncustom-model-123\ny\n\n\n",
+            api_key="sk-test",
+        )
+        output = f"{proc.stdout}\n{proc.stderr}"
+        self.assertEqual(proc.returncode, 0, msg=output)
+        self.assertIn("Select model for openai:", output)
+        self.assertIn('llm_model,data,string,"custom-model-123"', captured_csv)
+
+    def test_provision_interactive_ollama_model_menu_defaults_to_qwen(self) -> None:
+        proc, captured_csv = self._run_provision_capture_csv(
+            backend="ollama",
+            assume_yes=False,
+            input_text="\ny\n\n\n",
+            api_url="http://127.0.0.1:11434",
+        )
+        output = f"{proc.stdout}\n{proc.stderr}"
+        self.assertEqual(proc.returncode, 0, msg=output)
+        self.assertIn("Select model for ollama:", output)
+        self.assertIn('llm_backend,data,string,"ollama"', captured_csv)
+        self.assertIn('llm_model,data,string,"qwen3:8b"', captured_csv)
+        self.assertIn('llm_api_url,data,string,"http://127.0.0.1:11434/v1/chat/completions"', captured_csv)
 
     def test_provision_writes_chat_id_allowlist_and_legacy_primary_key(self) -> None:
         with tempfile.TemporaryDirectory() as td:
