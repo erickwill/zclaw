@@ -161,3 +161,15 @@ esp_err_t memory_delete(const char *key)
     nvs_close(handle);
     return err;
 }
+
+esp_err_t memory_factory_reset(void)
+{
+    esp_err_t err = nvs_flash_erase();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Factory reset erase failed: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    ESP_LOGW(TAG, "Factory reset: erased NVS storage");
+    return ESP_OK;
+}

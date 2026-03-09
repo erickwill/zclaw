@@ -7,9 +7,11 @@
 
 #include "agent.h"
 #include "config.h"
+#include "local_admin.h"
 #include "messages.h"
 #include "mock_freertos.h"
 #include "mock_llm.h"
+#include "mock_memory.h"
 #include "mock_ratelimit.h"
 #include "mock_tools.h"
 #include "freertos/queue.h"
@@ -83,6 +85,7 @@ static void reset_state(void)
 {
     mock_freertos_reset();
     mock_llm_reset();
+    mock_memory_reset();
     mock_ratelimit_reset();
     mock_tools_reset();
     s_telegram_pause_calls = 0;
@@ -442,6 +445,186 @@ TEST(diag_command_rejects_invalid_args)
     ASSERT(mock_tools_execute_calls() == 0);
     ASSERT(recv_channel_text(channel_q, text, sizeof(text)) == 1);
     ASSERT(strstr(text, "unknown /diag argument") != NULL);
+
+    vQueueDelete(channel_q);
+    return 0;
+}
+
+TEST(gpio_command_bypasses_llm_and_uses_tool)
+{
+    QueueHandle_t channel_q;
+    QueueHandle_t telegram_q;
+    char text[TELEGRAM_MAX_MSG_LEN];
+
+    reset_state();
+
+    channel_q = xQueueCreate(4, sizeof(channel_output_msg_t));
+    telegram_q = xQueueCreate(4, sizeof(telegram_msg_t));
+    ASSERT(channel_q != NULL);
+    ASSERT(telegram_q != NULL);
+    agent_test_set_queues(channel_q, telegram_q);
+
+    agent_test_process_message("/gpio all");
+    ASSERT(mock_llm_request_count() == 0);
+    ASSERT(mock_tools_execute_calls() == 1);
+    ASSERT(recv_channel_text(channel_q, text, sizeof(text)) == 1);
+    ASSERT_STR_EQ(text, "mock tool executed");
+    ASSERT(recv_telegram_text(telegram_q, text, sizeof(text)) == 1);
+    ASSERT_STR_EQ(text, "mock tool executed");
+
+    agent_test_process_message("/stop");
+    ASSERT(recv_channel_text(channel_q, text, sizeof(text)) == 1);
+    ASSERT(recv_telegram_text(telegram_q, text, sizeof(text)) == 1);
+    agent_test_process_message("/gpio 7");
+    ASSERT(mock_llm_request_count() == 0);
+    ASSERT(mock_tools_execute_calls() == 2);
+    ASSERT(recv_channel_text(channel_q, text, sizeof(text)) == 1);
+    ASSERT_STR_EQ(text, "mock tool executed");
+    ASSERT(recv_telegram_text(telegram_q, text, sizeof(text)) == 1);
+    ASSERT_STR_EQ(text, "mock tool executed");
+
+    agent_test_process_message("/gpio 9 low");
+    ASSERT(mock_llm_request_count() == 0);
+    ASSERT(mock_tools_execute_calls() == 3);
+    ASSERT(recv_channel_text(channel_q, text, sizeof(text)) == 1);
+    ASSERT_STR_EQ(text, "mock tool executed");
+    ASSERT(recv_telegram_text(telegram_q, text, sizeof(text)) == 1);
+    ASSERT_STR_EQ(text, "mock tool executed");
+
+    vQueueDelete(channel_q);
+    vQueueDelete(telegram_q);
+    return 0;
+}
+
+TEST(gpio_command_rejects_invalid_args)
+{
+    QueueHandle_t channel_q;
+    char text[CHANNEL_TX_BUF_SIZE];
+
+    reset_state();
+
+    channel_q = xQueueCreate(2, sizeof(channel_output_msg_t));
+    ASSERT(channel_q != NULL);
+    agent_test_set_queues(channel_q, NULL);
+
+    agent_test_process_message("/gpio nope");
+    ASSERT(mock_llm_request_count() == 0);
+    ASSERT(mock_tools_execute_calls() == 0);
+    ASSERT(recv_channel_text(channel_q, text, sizeof(text)) == 1);
+    ASSERT(strstr(text, "unknown /gpio argument") != NULL);
+
+    agent_test_process_message("/gpio all extra");
+    ASSERT(mock_llm_request_count() == 0);
+    ASSERT(mock_tools_execute_calls() == 0);
+    ASSERT(recv_channel_text(channel_q, text, sizeof(text)) == 1);
+    ASSERT(strstr(text, "/gpio all does not take extra arguments") != NULL);
+
+    agent_test_process_message("/gpio 9 sideways");
+    ASSERT(mock_llm_request_count() == 0);
+    ASSERT(mock_tools_execute_calls() == 0);
+    ASSERT(recv_channel_text(channel_q, text, sizeof(text)) == 1);
+    ASSERT(strstr(text, "unknown GPIO state") != NULL);
+
+    vQueueDelete(channel_q);
+    return 0;
+}
+
+TEST(local_admin_commands_are_local_only)
+{
+    QueueHandle_t channel_q;
+    QueueHandle_t telegram_q;
+    char text[TELEGRAM_MAX_MSG_LEN];
+
+    reset_state();
+
+    channel_q = xQueueCreate(2, sizeof(channel_output_msg_t));
+    telegram_q = xQueueCreate(2, sizeof(telegram_msg_t));
+    ASSERT(channel_q != NULL);
+    ASSERT(telegram_q != NULL);
+    agent_test_set_queues(channel_q, telegram_q);
+
+    agent_test_process_message_for_chat("/wifi status", -100222333444LL);
+    ASSERT(mock_llm_request_count() == 0);
+    ASSERT(mock_tools_execute_calls() == 0);
+    ASSERT(recv_telegram_text(telegram_q, text, sizeof(text)) == 1);
+    ASSERT(strstr(text, "only available on the USB serial console") != NULL);
+    ASSERT(recv_channel_text(channel_q, text, sizeof(text)) == 1);
+    ASSERT(strstr(text, "only available on the USB serial console") != NULL);
+    ASSERT(local_admin_test_last_action() == LOCAL_ADMIN_ACTION_NONE);
+
+    vQueueDelete(channel_q);
+    vQueueDelete(telegram_q);
+    return 0;
+}
+
+TEST(local_admin_commands_bypass_llm_and_report_state)
+{
+    QueueHandle_t channel_q;
+    char text[CHANNEL_TX_BUF_SIZE];
+
+    reset_state();
+
+    channel_q = xQueueCreate(4, sizeof(channel_output_msg_t));
+    ASSERT(channel_q != NULL);
+    agent_test_set_queues(channel_q, NULL);
+    local_admin_test_set_wifi_status("WiFi status: provisioned=yes safe_mode=no driver=started link=connected ssid=Trident ip=10.0.0.24 rssi=-77 last_reason=none");
+    local_admin_test_set_wifi_scan("WiFi scan: 2 APs visible (top 2)\n- Trident rssi=-77 auth=WPA2_PSK ch=6 (2437MHz)\n- Guest rssi=-88 auth=OPEN ch=1 (2412MHz)");
+    local_admin_set_safe_mode(true);
+    local_admin_set_device_configured(true);
+    mock_memory_set_kv("boot_count", "3");
+
+    agent_test_process_message("/wifi status");
+    ASSERT(mock_llm_request_count() == 0);
+    ASSERT(mock_tools_execute_calls() == 0);
+    ASSERT(recv_channel_text(channel_q, text, sizeof(text)) == 1);
+    ASSERT(strstr(text, "ssid=Trident") != NULL);
+
+    agent_test_process_message("/wifi scan");
+    ASSERT(mock_llm_request_count() == 0);
+    ASSERT(mock_tools_execute_calls() == 0);
+    ASSERT(recv_channel_text(channel_q, text, sizeof(text)) == 1);
+    ASSERT(strstr(text, "WiFi scan: 2 APs visible") != NULL);
+
+    agent_test_process_message("/bootcount");
+    ASSERT(mock_llm_request_count() == 0);
+    ASSERT(mock_tools_execute_calls() == 0);
+    ASSERT(recv_channel_text(channel_q, text, sizeof(text)) == 1);
+    ASSERT(strstr(text, "persisted=3") != NULL);
+    ASSERT(strstr(text, "safe_mode=yes") != NULL);
+
+    vQueueDelete(channel_q);
+    return 0;
+}
+
+TEST(local_admin_reboot_and_factory_reset_commands)
+{
+    QueueHandle_t channel_q;
+    char text[CHANNEL_TX_BUF_SIZE];
+
+    reset_state();
+
+    channel_q = xQueueCreate(4, sizeof(channel_output_msg_t));
+    ASSERT(channel_q != NULL);
+    agent_test_set_queues(channel_q, NULL);
+    mock_memory_set_kv("wifi_ssid", "Trident");
+    mock_memory_set_kv("api_key", "test-key");
+
+    agent_test_process_message("/factory-reset");
+    ASSERT(recv_channel_text(channel_q, text, sizeof(text)) == 1);
+    ASSERT(strstr(text, "Run /factory-reset confirm") != NULL);
+    ASSERT(local_admin_test_last_action() == LOCAL_ADMIN_ACTION_NONE);
+    ASSERT(mock_memory_count() == 2);
+
+    agent_test_process_message("/factory-reset confirm");
+    ASSERT(recv_channel_text(channel_q, text, sizeof(text)) == 1);
+    ASSERT(strstr(text, "Factory reset confirmed") != NULL);
+    ASSERT(local_admin_test_last_action() == LOCAL_ADMIN_ACTION_FACTORY_RESET_REBOOT);
+    ASSERT(mock_memory_count() == 0);
+
+    agent_test_process_message("/reboot");
+    ASSERT(recv_channel_text(channel_q, text, sizeof(text)) == 1);
+    ASSERT_STR_EQ(text, "Rebooting...");
+    ASSERT(local_admin_test_last_action() == LOCAL_ADMIN_ACTION_REBOOT);
 
     vQueueDelete(channel_q);
     return 0;
@@ -809,6 +992,41 @@ int test_agent_all(void)
 
     printf("  diag_command_rejects_invalid_args... ");
     if (test_diag_command_rejects_invalid_args() == 0) {
+        printf("OK\n");
+    } else {
+        failures++;
+    }
+
+    printf("  gpio_command_bypasses_llm_and_uses_tool... ");
+    if (test_gpio_command_bypasses_llm_and_uses_tool() == 0) {
+        printf("OK\n");
+    } else {
+        failures++;
+    }
+
+    printf("  gpio_command_rejects_invalid_args... ");
+    if (test_gpio_command_rejects_invalid_args() == 0) {
+        printf("OK\n");
+    } else {
+        failures++;
+    }
+
+    printf("  local_admin_commands_are_local_only... ");
+    if (test_local_admin_commands_are_local_only() == 0) {
+        printf("OK\n");
+    } else {
+        failures++;
+    }
+
+    printf("  local_admin_commands_bypass_llm_and_report_state... ");
+    if (test_local_admin_commands_bypass_llm_and_report_state() == 0) {
+        printf("OK\n");
+    } else {
+        failures++;
+    }
+
+    printf("  local_admin_reboot_and_factory_reset_commands... ");
+    if (test_local_admin_reboot_and_factory_reset_commands() == 0) {
         printf("OK\n");
     } else {
         failures++;

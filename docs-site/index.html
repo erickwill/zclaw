@@ -36,6 +36,7 @@
           <li><a href="local-dev.html">Chapter 6 · Local Dev &amp; Hacking</a></li>
           <li><a href="use-cases.html">Chapter 7 · Use Cases</a></li>
           <li><a href="changelog.html">Chapter 8 · Changelog</a></li>
+          <li><a href="local-admin.html">Chapter 9 · Local Admin Console</a></li>
         </ul>
         <p class="sidebar-note">Practical notes for building, flashing, and operating zclaw in the field.</p>
       </aside>
@@ -77,20 +78,20 @@ Agent: Created schedule #7: once in 20 min -> check the garage sensor</pre>
         <section class="section">
           <h2>What "888 KiB" Means</h2>
           <p>The <strong>888 KiB</strong> target is an all-in firmware cap, not just zclaw application logic. It includes app code plus ESP-IDF/FreeRTOS runtime, Wi-Fi/networking, TLS/crypto, and cert bundle overhead.</p>
-          <p>Current default <code>esp32s3</code> build (grouped loadable image bytes from <code>idf.py -B build size-components</code>; rows sum to total image size):</p>
+          <p>Current default <code>esp32</code> build (grouped image bytes from <code>idf.py -B build size-components</code>):</p>
           <table>
             <thead>
               <tr><th>Layer</th><th>Size</th><th>Share</th></tr>
             </thead>
             <tbody>
-              <tr><td>zclaw app logic (<code>libmain.a</code>)</td><td>35,742 bytes (~34.9 KiB)</td><td>~4.1%</td></tr>
-              <tr><td>Wi-Fi + networking stack</td><td>397,356 bytes (~388.0 KiB)</td><td>~45.7%</td></tr>
-              <tr><td>TLS/crypto stack</td><td>112,922 bytes (~110.3 KiB)</td><td>~13.0%</td></tr>
-              <tr><td>Cert bundle + app metadata</td><td>99,722 bytes (~97.4 KiB)</td><td>~11.5%</td></tr>
-              <tr><td>Other ESP-IDF/runtime/drivers/libc</td><td>224,096 bytes (~218.8 KiB)</td><td>~25.8%</td></tr>
+              <tr><td>zclaw app logic (<code>libmain.a</code>)</td><td>39,276 bytes (~38.4 KiB)</td><td>~4.6%</td></tr>
+              <tr><td>Wi-Fi + networking stack</td><td>378,624 bytes (~369.8 KiB)</td><td>~44.4%</td></tr>
+              <tr><td>TLS/crypto stack</td><td>134,923 bytes (~131.8 KiB)</td><td>~15.8%</td></tr>
+              <tr><td>Cert bundle + app metadata</td><td>98,425 bytes (~96.1 KiB)</td><td>~11.5%</td></tr>
+              <tr><td>Other ESP-IDF/runtime/drivers/libc</td><td>201,786 bytes (~197.1 KiB)</td><td>~23.7%</td></tr>
             </tbody>
           </table>
-          <p class="inline-note">Total image size from this build is <strong>869,838 bytes</strong>; padded <code>zclaw.bin</code> is <strong>869,952 bytes</strong> (~849.6 KiB), under the 888 KiB cap.</p>
+          <p class="inline-note">Total image size from this build is <strong>853,034 bytes</strong>; padded <code>zclaw.bin</code> is <strong>853,184 bytes</strong> (~833.2 KiB), leaving <strong>56,128 bytes</strong> (~54.8 KiB) under the 888 KiB cap.</p>
         </section>
 
         <section class="section">
@@ -128,6 +129,10 @@ Agent: Created schedule #7: once in 20 min -> check the garage sensor</pre>
               <strong>Chapter 8 · Changelog</strong>
               <span>Release notes and a timeline of what changed across versions.</span>
             </a>
+            <a class="chapter-link" href="local-admin.html">
+              <strong>Chapter 9 · Local Admin Console</strong>
+              <span>USB-local recovery and bring-up commands that work without Wi-Fi or the LLM.</span>
+            </a>
           </div>
         </section>
 
@@ -137,6 +142,7 @@ Agent: Created schedule #7: once in 20 min -> check the garage sensor</pre>
             <li><strong>Language/runtime:</strong> C + ESP-IDF + FreeRTOS.</li>
             <li><strong>LLM backends:</strong> Anthropic, OpenAI, OpenRouter, Ollama (custom endpoint).</li>
             <li><strong>Interface:</strong> Telegram and optional host web relay.</li>
+            <li><strong>Recovery plane:</strong> USB local admin commands keep the board operable in safe mode and before network bring-up.</li>
             <li><strong>Philosophy:</strong> ship useful automation under strict resource bounds.</li>
           </ul>
         </section>

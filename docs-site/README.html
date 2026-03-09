@@ -191,24 +191,25 @@
           <img src="images/lobster_xiao_cropped_left.png" alt="Lobster soldering a Seeed Studio XIAO ESP32-C3">
         </section>
 
-        <p>Current default <code>esp32s3</code> breakdown (<code>idf.py -B build size-components</code>, flash totals):</p>
+        <p>Current default <code>esp32</code> breakdown (<code>idf.py -B build size-components</code>, grouped image bytes):</p>
         <table>
           <thead>
             <tr><th>Layer</th><th>Size</th><th>Share</th></tr>
           </thead>
           <tbody>
-            <tr><td>zclaw app logic (<code>libmain.a</code>)</td><td>26,430 bytes (~25.8 KiB)</td><td>~3.1%</td></tr>
-            <tr><td>Wi-Fi + networking stack</td><td>375,278 bytes (~366.5 KiB)</td><td>~43.7%</td></tr>
-            <tr><td>TLS/crypto stack</td><td>125,701 bytes (~122.8 KiB)</td><td>~14.7%</td></tr>
-            <tr><td>Cert bundle + app metadata</td><td>92,654 bytes (~90.5 KiB)</td><td>~10.8%</td></tr>
-            <tr><td>Other ESP-IDF/runtime/drivers/libc</td><td>237,889 bytes (~232.3 KiB)</td><td>~27.7%</td></tr>
+            <tr><td>zclaw app logic (<code>libmain.a</code>)</td><td>39,276 bytes (~38.4 KiB)</td><td>~4.6%</td></tr>
+            <tr><td>Wi-Fi + networking stack</td><td>378,624 bytes (~369.8 KiB)</td><td>~44.4%</td></tr>
+            <tr><td>TLS/crypto stack</td><td>134,923 bytes (~131.8 KiB)</td><td>~15.8%</td></tr>
+            <tr><td>Cert bundle + app metadata</td><td>98,425 bytes (~96.1 KiB)</td><td>~11.5%</td></tr>
+            <tr><td>Other ESP-IDF/runtime/drivers/libc</td><td>201,786 bytes (~197.1 KiB)</td><td>~23.7%</td></tr>
           </tbody>
         </table>
-        <p><code>zclaw.bin</code> from the same build is <strong>865,888 bytes</strong> (~845.6 KiB), under the 888 KiB cap.</p>
+        <p><code>zclaw.bin</code> from the same build is <strong>853,184 bytes</strong> (~833.2 KiB), leaving <strong>56,128 bytes</strong> (~54.8 KiB) under the 888 KiB cap.</p>
 
         <h2>Full Documentation</h2>
         <ul>
           <li><a href="index.html">Full docs site</a></li>
+          <li><a href="local-admin.html">Local Admin Console</a></li>
           <li><a href="reference/README_COMPLETE.md">Complete README (verbatim, full detail)</a></li>
         </ul>
 
@@ -230,6 +231,7 @@ bash &lt;(curl -fsSL https://raw.githubusercontent.com/tnm/zclaw/main/scripts/bo
           <li>After flashing, provision WiFi + LLM credentials with <code>./scripts/provision.sh</code>.</li>
           <li>For Ollama, run it on a LAN-reachable host and pass <code>--backend ollama --api-url http://&lt;host&gt;:11434</code> during provisioning.</li>
           <li>Telegram control commands: <code>/start</code> and <code>/help</code> show help, <code>/settings</code> shows bot status, <code>/stop</code> pauses message intake, <code>/resume</code> re-enables message intake.</li>
+          <li>USB local admin commands: <code>/gpio</code>, <code>/diag</code>, <code>/reboot</code>, <code>/wifi</code>, <code>/bootcount</code>, and <code>/factory-reset confirm</code> work without the LLM path.</li>
           <li>If serial port is busy, run <code>./scripts/release-port.sh</code> and retry.</li>
           <li>Full setup/provisioning details are in the docs site index.</li>
         </ul>
@@ -240,6 +242,7 @@ bash &lt;(curl -fsSL https://raw.githubusercontent.com/tnm/zclaw/main/scripts/bo
           <li>Timezone-aware schedules (<code>daily</code>, <code>periodic</code>, and one-shot <code>once</code>)</li>
           <li>Built-in + user-defined tools</li>
           <li>GPIO read/write control with guardrails</li>
+          <li>USB local admin console for recovery and safe mode</li>
           <li>Persistent memory across reboots</li>
           <li>Provider support for Anthropic, OpenAI, OpenRouter, and Ollama (custom endpoint)</li>
         </ul>
@@ -266,6 +269,16 @@ bash &lt;(curl -fsSL https://raw.githubusercontent.com/tnm/zclaw/main/scripts/bo
             <tr><td><code>./scripts/test.sh</code></td><td>Run host/device test flows</td></tr>
           </tbody>
         </table>
+
+        <h2>Local Admin Console</h2>
+        <p>When the board is in safe mode, unprovisioned, or the network path is broken, use the USB console for local admin commands.</p>
+        <pre><code>./scripts/monitor.sh /dev/cu.usbmodem1101
+/wifi status
+/wifi scan
+/bootcount
+/gpio all
+/reboot</code></pre>
+        <p>See <a href="local-admin.html">Chapter 9 · Local Admin Console</a> for the full command reference and the destructive reset path.</p>
 
         <h2>License</h2>
         <p>MIT</p>

@@ -16,4 +16,7 @@ bool memory_get(const char *key, char *value, size_t max_len);
 // Delete a key
 esp_err_t memory_delete(const char *key);
 
+// Erase all persisted state in the configured NVS storage.
+esp_err_t memory_factory_reset(void);
+
 #endif // MEMORY_H

@@ -5,6 +5,7 @@ idf_component_register(
         "agent_commands.c"
         "agent_prompt.c"
         "channel.c"
+        "local_admin.c"
         "llm.c"
         "llm_auth.c"
         "http_gate.c"

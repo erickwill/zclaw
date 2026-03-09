@@ -22,6 +22,7 @@ Fun to use, fun to hack on.
 Use the docs site for complete guides and reference.
 
 - [Full documentation](https://zclaw.dev)
+- [Local Admin Console](https://zclaw.dev/local-admin.html)
 - [Use cases: useful + fun](https://zclaw.dev/use-cases.html)
 - [Changelog (web)](https://zclaw.dev/changelog.html)
 - [Complete README (verbatim)](https://zclaw.dev/reference/README_COMPLETE.md)
@@ -71,6 +72,7 @@ Non-interactive install:
 - For brand-new built-in capabilities, add a firmware tool (C handler + registry entry) via the Build Your Own Tool docs.
 - Runtime diagnostics via `get_diagnostics` (quick/runtime/memory/rates/time/all scopes)
 - GPIO read/write control with guardrails (including bulk `gpio_read_all`)
+- USB local admin console for recovery, safe mode, and pre-network bring-up
 - Persistent memory across reboots
 - Persona options: `neutral`, `friendly`, `technical`, `witty`
 - Provider support for Anthropic, OpenAI, OpenRouter, and Ollama (custom endpoint)
@@ -128,19 +130,44 @@ More details in the [Local Dev & Hacking guide](https://zclaw.dev/local-dev.html
 
 </details>
 
+## Local Admin Console
+
+When the board is in safe mode, unprovisioned, or the LLM path is unavailable, you can still operate it over USB serial without Wi-Fi or an LLM round trip.
+
+```bash
+./scripts/monitor.sh /dev/cu.usbmodem1101
+# then type:
+/wifi status
+/wifi scan
+/bootcount
+/gpio all
+/reboot
+```
+
+Available local-only commands:
+
+- `/gpio [all|pin|pin high|pin low]`
+- `/diag [scope] [verbose]`
+- `/reboot`
+- `/wifi [status|scan]`
+- `/bootcount`
+- `/factory-reset confirm` (destructive; wipes NVS and reboots)
+
+Full reference: [Local Admin Console](https://zclaw.dev/local-admin.html)
+
 ## Size Breakdown
 
-Current default `esp32s3` breakdown (grouped loadable image bytes from `idf.py -B build size-components`; rows sum to total image size):
+Current default `esp32` breakdown (grouped image bytes from `idf.py -B build size-components`):
 
 | Segment | Bytes | Size | Share |
 | --- | ---: | ---: | ---: |
-| zclaw app logic (`libmain.a`) | `35742` | ~34.9 KiB | ~4.1% |
-| Wi-Fi + networking stack | `397356` | ~388.0 KiB | ~45.7% |
-| TLS/crypto stack | `112922` | ~110.3 KiB | ~13.0% |
-| cert bundle + app metadata | `99722` | ~97.4 KiB | ~11.5% |
-| other ESP-IDF/runtime/drivers/libc | `224096` | ~218.8 KiB | ~25.8% |
+| zclaw app logic (`libmain.a`) | `39276` | ~38.4 KiB | ~4.6% |
+| Wi-Fi + networking stack | `378624` | ~369.8 KiB | ~44.4% |
+| TLS/crypto stack | `134923` | ~131.8 KiB | ~15.8% |
+| cert bundle + app metadata | `98425` | ~96.1 KiB | ~11.5% |
+| other ESP-IDF/runtime/drivers/libc | `201786` | ~197.1 KiB | ~23.7% |
 
-Total image size from this build is `869838` bytes; padded `zclaw.bin` is `869952` bytes (~849.6 KiB), still under the cap.
+Total image size from this build is `853034` bytes; padded `zclaw.bin` is `853184` bytes (~833.2 KiB), leaving `56128` bytes (~54.8 KiB) under the 888 KiB cap.
 
 ## Latency Benchmarking
 

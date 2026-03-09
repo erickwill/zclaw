@@ -146,6 +146,7 @@ Direct chapter links:
 - [Tool Reference](docs-site/tools.html)
 - [Architecture](docs-site/architecture.html)
 - [Security](docs-site/security.html)
+- [Local Admin Console](docs-site/local-admin.html)
 - [Docs site README](docs-site/README.md)
 
 ### Telegram Setup
@@ -197,6 +198,31 @@ No board yet? Run with a built-in mock responder:
 
 This relay approach does not add web UI code to ESP32 firmware binary.
 
+### Local Admin Console
+
+When the board is in safe mode, unprovisioned, or the normal network path is unavailable, you can still operate it over USB serial without Wi-Fi or an LLM round trip.
+
+```bash
+./scripts/monitor.sh /dev/cu.usbmodem1101
+# then type:
+/wifi status
+/wifi scan
+/bootcount
+/gpio all
+/reboot
+```
+
+Available local-only commands:
+
+- `/gpio [all|pin|pin high|pin low]`
+- `/diag [scope] [verbose]`
+- `/reboot`
+- `/wifi [status|scan]`
+- `/bootcount`
+- `/factory-reset confirm` (destructive; wipes NVS and reboots)
+
+Full reference: [Local Admin Console](docs-site/local-admin.html)
+
 ## Tools
 
 | Tool | Description |
@@ -235,7 +261,7 @@ Example tool call input:
 ### Runtime Diagnostics (`get_diagnostics`)
 
 `get_diagnostics` is a deeper companion to `get_health`. It supports scoped checks plus an optional `verbose` mode.
-For Telegram control-plane checks without an LLM round trip, use `/diag [scope] [verbose]`.
+For USB-local diagnostics without an LLM round trip, use `/diag [scope] [verbose]` on the serial console.
 
 - `scope: quick` (default) — one-line snapshot for uptime, heap, rates, time sync, timezone, boot count, and version
 - `scope: runtime` — uptime, boot count, firmware version

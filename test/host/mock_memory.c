@@ -74,6 +74,20 @@ void mock_memory_fail_next_set(esp_err_t err)
     s_next_set_err = err;
 }
 
+size_t mock_memory_count(void)
+{
+    size_t count = 0;
+    int i;
+
+    for (i = 0; i < MOCK_MEMORY_SLOTS; i++) {
+        if (s_slots[i].in_use) {
+            count++;
+        }
+    }
+
+    return count;
+}
+
 esp_err_t memory_init(void)
 {
     mock_memory_reset();
@@ -124,5 +138,11 @@ esp_err_t memory_delete(const char *key)
     }
 
     memset(&s_slots[slot], 0, sizeof(s_slots[slot]));
+    return ESP_OK;
+}
+
+esp_err_t memory_factory_reset(void)
+{
+    mock_memory_reset();
     return ESP_OK;
 }

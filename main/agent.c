@@ -2,6 +2,7 @@
 #include "agent_commands.h"
 #include "agent_prompt.h"
 #include "config.h"
+#include "local_admin.h"
 #include "llm.h"
 #include "tools.h"
 #include "user_tools.h"
@@ -257,6 +258,89 @@ static void handle_diag_command(const char *user_message, int64_t chat_id, reque
     metrics_log_request(metrics, "diag_handled");
 }
 
+static void handle_gpio_command(const char *user_message, int64_t chat_id, request_metrics_t *metrics)
+{
+    char error[120] = {0};
+    cJSON *tool_input = cJSON_CreateObject();
+    const char *tool_name = NULL;
+    bool ok;
+    int64_t started_us;
+
+    if (!tool_input) {
+        send_response("Error: GPIO read unavailable (allocation failed)", chat_id);
+        metrics_log_request(metrics, "gpio_no_mem");
+        return;
+    }
+
+    if (!agent_parse_gpio_command_args(user_message, &tool_name, tool_input, error, sizeof(error))) {
+        send_response(error, chat_id);
+        cJSON_Delete(tool_input);
+        metrics_log_request(metrics, "gpio_invalid_args");
+        return;
+    }
+
+    s_tool_result_buf[0] = '\0';
+    started_us = esp_timer_get_time();
+    ok = tools_execute(tool_name, tool_input, s_tool_result_buf, sizeof(s_tool_result_buf));
+    metrics->tool_us_total += elapsed_us_since(started_us);
+    metrics->tool_calls++;
+    cJSON_Delete(tool_input);
+
+    if (!ok) {
+        if (s_tool_result_buf[0] == '\0') {
+            snprintf(s_tool_result_buf, sizeof(s_tool_result_buf), "Error: GPIO read failed");
+        }
+        send_response(s_tool_result_buf, chat_id);
+        metrics_log_request(metrics, "gpio_failed");
+        return;
+    }
+
+    send_response(s_tool_result_buf, chat_id);
+    metrics_log_request(metrics, "gpio_handled");
+}
+
+static bool is_local_admin_command(const char *user_message)
+{
+    return agent_is_command(user_message, "gpio") ||
+           agent_is_command(user_message, "diag") ||
+           local_admin_is_command(user_message);
+}
+
+static void handle_local_admin_command(const char *user_message,
+                                       message_source_t source,
+                                       int64_t chat_id,
+                                       request_metrics_t *metrics)
+{
+    char response[CHANNEL_TX_BUF_SIZE];
+    local_admin_action_t action = LOCAL_ADMIN_ACTION_NONE;
+
+    if (source != MSG_SOURCE_CHANNEL) {
+        send_response("Error: local admin commands are only available on the USB serial console.", chat_id);
+        metrics_log_request(metrics, "local_admin_remote_denied");
+        return;
+    }
+
+    if (agent_is_command(user_message, "diag")) {
+        handle_diag_command(user_message, chat_id, metrics);
+        return;
+    }
+
+    if (agent_is_command(user_message, "gpio")) {
+        handle_gpio_command(user_message, chat_id, metrics);
+        return;
+    }
+
+    if (!local_admin_handle_command(user_message, response, sizeof(response), &action)) {
+        send_response(response, chat_id);
+        metrics_log_request(metrics, "local_admin_invalid");
+        return;
+    }
+
+    send_response(response, chat_id);
+    metrics_log_request(metrics, "local_admin_handled");
+    local_admin_perform_action(action);
+}
+
 static void handle_start_command(int64_t chat_id)
 {
     static const char *START_HELP_TEXT =
@@ -271,12 +355,19 @@ static void handle_start_command(int64_t chat_id)
         "- turn the arcade on in 10 minutes\n"
         "- switch to witty persona\n"
         "\n"
-        "Telegram control commands:\n"
+        "Chat commands:\n"
         "- /help (show this message)\n"
         "- /settings (show status)\n"
-        "- /diag [scope] [verbose] (local diagnostics)\n"
         "- /stop (pause intake)\n"
-        "- /resume (resume)";
+        "- /resume (resume)\n"
+        "\n"
+        "USB local admin commands:\n"
+        "- /gpio [all|pin|pin high|pin low]\n"
+        "- /diag [scope] [verbose]\n"
+        "- /reboot\n"
+        "- /wifi [status|scan]\n"
+        "- /bootcount\n"
+        "- /factory-reset confirm";
     send_response(START_HELP_TEXT, chat_id);
 }
 
@@ -287,7 +378,9 @@ static void handle_settings_command(int64_t chat_id)
              "zclaw settings:\n"
              "- Message intake: %s\n"
              "- Persona: %s\n"
-             "- Telegram commands: /start, /help, /settings, /diag, /stop, /resume\n"
+             "- Chat commands: /start, /help, /settings, /stop, /resume\n"
+             "- USB local admin: /gpio, /diag, /reboot, /wifi, /bootcount, /factory-reset\n"
+             "- /gpio supports reads and writes (e.g. /gpio 9 low)\n"
              "- Persona changes: ask in normal chat (handled via tool calls)\n"
              "- Device settings are global (e.g., timezone <name>)",
              s_messages_paused ? "paused" : "active",
@@ -304,7 +397,7 @@ static int64_t response_chat_id_for_source(message_source_t source, int64_t chat
 }
 
 // Process a single user message
-static void process_message(const char *user_message, int64_t reply_chat_id)
+static void process_message(const char *user_message, message_source_t source, int64_t reply_chat_id)
 {
     ESP_LOGI(TAG, "Processing: %s", user_message);
     int history_turn_start = s_history_len;
@@ -338,8 +431,8 @@ static void process_message(const char *user_message, int64_t reply_chat_id)
         return;
     }
 
-    if (agent_is_command(user_message, "diag")) {
-        handle_diag_command(user_message, reply_chat_id, &metrics);
+    if (is_local_admin_command(user_message)) {
+        handle_local_admin_command(user_message, source, reply_chat_id, &metrics);
         return;
     }
 
@@ -649,6 +742,7 @@ void agent_test_reset(void)
     memset(s_last_non_command_text, 0, sizeof(s_last_non_command_text));
     s_messages_paused = false;
     memset(s_test_persona_value, 0, sizeof(s_test_persona_value));
+    local_admin_test_reset();
     load_persona_from_store();
 }
 
@@ -661,12 +755,12 @@ void agent_test_set_queues(QueueHandle_t channel_output_queue,
 
 void agent_test_process_message(const char *user_message)
 {
-    process_message(user_message, 0);
+    process_message(user_message, MSG_SOURCE_CHANNEL, 0);
 }
 
 void agent_test_process_message_for_chat(const char *user_message, int64_t reply_chat_id)
 {
-    process_message(user_message, reply_chat_id);
+    process_message(user_message, MSG_SOURCE_TELEGRAM, reply_chat_id);
 }
 #endif
 
@@ -680,7 +774,7 @@ static void agent_task(void *arg)
 
     while (1) {
         if (xQueueReceive(s_input_queue, &msg, portMAX_DELAY) == pdTRUE) {
-            process_message(msg.text, response_chat_id_for_source(msg.source, msg.chat_id));
+            process_message(msg.text, msg.source, response_chat_id_for_source(msg.source, msg.chat_id));
         }
     }
 }
