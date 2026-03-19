@@ -28,6 +28,22 @@ TOOL_ENTRY("i2c_scan",
            "Scan I2C bus for responding 7-bit addresses on selected SDA/SCL pins.",
            "{\"type\":\"object\",\"properties\":{\"sda_pin\":{\"type\":\"integer\",\"description\":\"GPIO pin for SDA (subject to GPIO Tool Safety policy)\"},\"scl_pin\":{\"type\":\"integer\",\"description\":\"GPIO pin for SCL (subject to GPIO Tool Safety policy)\"},\"frequency_hz\":{\"type\":\"integer\",\"description\":\"I2C bus speed in Hz (optional, default 100000)\"}},\"required\":[\"sda_pin\",\"scl_pin\"]}",
            tools_i2c_scan_handler)
+TOOL_ENTRY("i2c_write",
+           "Write space-separated hex bytes to a 7-bit I2C address on selected SDA/SCL pins.",
+           "{\"type\":\"object\",\"properties\":{\"sda_pin\":{\"type\":\"integer\",\"description\":\"GPIO pin for SDA (subject to GPIO Tool Safety policy)\"},\"scl_pin\":{\"type\":\"integer\",\"description\":\"GPIO pin for SCL (subject to GPIO Tool Safety policy)\"},\"address\":{\"type\":\"integer\",\"description\":\"7-bit I2C device address (3-119 decimal, e.g. 118 for 0x76)\"},\"data_hex\":{\"type\":\"string\",\"description\":\"Space-separated hex bytes to write, e.g. '0xF4 0x2E'\"},\"frequency_hz\":{\"type\":\"integer\",\"description\":\"I2C bus speed in Hz (optional, default 100000)\"}},\"required\":[\"sda_pin\",\"scl_pin\",\"address\",\"data_hex\"]}",
+           tools_i2c_write_handler)
+TOOL_ENTRY("i2c_read",
+           "Read bytes from a 7-bit I2C address on selected SDA/SCL pins.",
+           "{\"type\":\"object\",\"properties\":{\"sda_pin\":{\"type\":\"integer\",\"description\":\"GPIO pin for SDA (subject to GPIO Tool Safety policy)\"},\"scl_pin\":{\"type\":\"integer\",\"description\":\"GPIO pin for SCL (subject to GPIO Tool Safety policy)\"},\"address\":{\"type\":\"integer\",\"description\":\"7-bit I2C device address (3-119 decimal, e.g. 118 for 0x76)\"},\"read_length\":{\"type\":\"integer\",\"description\":\"Number of bytes to read (1-64)\"},\"frequency_hz\":{\"type\":\"integer\",\"description\":\"I2C bus speed in Hz (optional, default 100000)\"}},\"required\":[\"sda_pin\",\"scl_pin\",\"address\",\"read_length\"]}",
+           tools_i2c_read_handler)
+TOOL_ENTRY("i2c_write_read",
+           "Write space-separated hex bytes, then read bytes from the same 7-bit I2C address on selected SDA/SCL pins. Use this for register reads.",
+           "{\"type\":\"object\",\"properties\":{\"sda_pin\":{\"type\":\"integer\",\"description\":\"GPIO pin for SDA (subject to GPIO Tool Safety policy)\"},\"scl_pin\":{\"type\":\"integer\",\"description\":\"GPIO pin for SCL (subject to GPIO Tool Safety policy)\"},\"address\":{\"type\":\"integer\",\"description\":\"7-bit I2C device address (3-119 decimal, e.g. 118 for 0x76)\"},\"write_hex\":{\"type\":\"string\",\"description\":\"Space-separated hex bytes to write first, e.g. '0xD0'\"},\"read_length\":{\"type\":\"integer\",\"description\":\"Number of bytes to read after the write (1-64)\"},\"frequency_hz\":{\"type\":\"integer\",\"description\":\"I2C bus speed in Hz (optional, default 100000)\"}},\"required\":[\"sda_pin\",\"scl_pin\",\"address\",\"write_hex\",\"read_length\"]}",
+           tools_i2c_write_read_handler)
+TOOL_ENTRY("dht_read",
+           "Read a supported DHT temperature/humidity sensor on one GPIO pin. DHT uses its own single-wire timing protocol, not I2C.",
+           "{\"type\":\"object\",\"properties\":{\"pin\":{\"type\":\"integer\",\"description\":\"GPIO pin connected to the DHT data line (subject to GPIO Tool Safety policy)\"},\"model\":{\"type\":\"string\",\"enum\":[\"dht11\",\"dht22\"],\"description\":\"DHT sensor model\"},\"retries\":{\"type\":\"integer\",\"description\":\"Optional retry count (1-3, default 1)\"}},\"required\":[\"pin\",\"model\"]}",
+           tools_dht_read_handler)
 
 // Memory
 TOOL_ENTRY("memory_set",

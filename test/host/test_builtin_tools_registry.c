@@ -76,6 +76,10 @@ TEST(required_core_tools_exist)
 {
     static const char *required[] = {
         "gpio_write",
+        "i2c_write",
+        "i2c_read",
+        "i2c_write_read",
+        "dht_read",
         "memory_set",
         "cron_set",
         "get_diagnostics",
