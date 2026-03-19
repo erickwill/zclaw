@@ -8,6 +8,18 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 - No unreleased changes yet.
 
+## [2.12.1] - 2026-03-18
+
+### Fixed
+- Added a first-class `esp32-t-relay` board preset across build, flash, and secure-flash flows so LilyGO TTGO T-Relay users can target the board's relay GPIOs (`5`, `18`, `19`, `21`) without getting stuck behind the generic `GPIO 2-10` starter policy.
+
+### Docs
+- Clarified that stock classic `esp32` builds keep a deliberately conservative GPIO starter range and, with flash-pin blocking applied, effectively expose only `GPIO 2-5` until the GPIO policy is changed or a board preset is used.
+- Documented the new `--t-relay` preset in the getting-started and full-reference docs.
+
+### Tests
+- Added host coverage for the new T-Relay preset path in build/flash scripts, including target-mismatch rejection behavior.
+
 ## [2.12.0] - 2026-03-09
 
 ### Added
