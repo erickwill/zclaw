@@ -84,6 +84,7 @@ Classic **ESP32-WROOM/ESP32 DevKit** boards are supported.
 Test reports for other ESP32 variants are very welcome!
 
 Recommended starter board: [Seeed XIAO ESP32-C3](https://www.seeedstudio.com/Seeed-XIAO-ESP32C3-p-5431.html)
+Relay-board preset: **LilyGO TTGO T-Relay** via `./scripts/build.sh --t-relay` and `./scripts/flash.sh --t-relay /dev/cu.usbserial-0001`
 
 ## Local Dev & Hacking
 
