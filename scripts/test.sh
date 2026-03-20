@@ -153,6 +153,7 @@ run_host_tests() {
 
     echo "=== Running host bridge Python tests ==="
     python3 -m unittest -q \
+        test_benchmark_latency.py \
         test_qemu_live_llm_bridge.py \
         test_web_relay.py \
         test_install_provision_scripts.py \

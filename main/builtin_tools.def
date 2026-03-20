@@ -18,7 +18,7 @@ TOOL_ENTRY("gpio_read",
            tools_gpio_read_handler)
 TOOL_ENTRY("gpio_read_all",
            "Read all allowed GPIO states.",
-           "{\"type\":\"object\"}",
+           "{\"type\":\"object\",\"properties\":{}}",
            tools_gpio_read_all_handler)
 TOOL_ENTRY("delay",
            "Wait in milliseconds.",
@@ -56,7 +56,7 @@ TOOL_ENTRY("memory_get",
            tools_memory_get_handler)
 TOOL_ENTRY("memory_list",
            "List user memory keys.",
-           "{\"type\":\"object\"}",
+           "{\"type\":\"object\",\"properties\":{}}",
            tools_memory_list_handler)
 TOOL_ENTRY("memory_delete",
            "Delete a user memory key.",
@@ -68,11 +68,11 @@ TOOL_ENTRY("set_persona",
            tools_set_persona_handler)
 TOOL_ENTRY("get_persona",
            "Get the current assistant persona.",
-           "{\"type\":\"object\"}",
+           "{\"type\":\"object\",\"properties\":{}}",
            tools_get_persona_handler)
 TOOL_ENTRY("reset_persona",
            "Reset the assistant persona to neutral.",
-           "{\"type\":\"object\"}",
+           "{\"type\":\"object\",\"properties\":{}}",
            tools_reset_persona_handler)
 
 // Cron/Scheduler
@@ -82,7 +82,7 @@ TOOL_ENTRY("cron_set",
            tools_cron_set_handler)
 TOOL_ENTRY("cron_list",
            "List scheduled tasks.",
-           "{\"type\":\"object\"}",
+           "{\"type\":\"object\",\"properties\":{}}",
            tools_cron_list_handler)
 TOOL_ENTRY("cron_delete",
            "Delete a scheduled task.",
@@ -90,7 +90,7 @@ TOOL_ENTRY("cron_delete",
            tools_cron_delete_handler)
 TOOL_ENTRY("get_time",
            "Get local device time.",
-           "{\"type\":\"object\"}",
+           "{\"type\":\"object\",\"properties\":{}}",
            tools_get_time_handler)
 TOOL_ENTRY("set_timezone",
            "Set the device timezone.",
@@ -98,19 +98,19 @@ TOOL_ENTRY("set_timezone",
            tools_set_timezone_handler)
 TOOL_ENTRY("get_timezone",
            "Get the device timezone.",
-           "{\"type\":\"object\"}",
+           "{\"type\":\"object\",\"properties\":{}}",
            tools_get_timezone_handler)
 
 // System
 TOOL_ENTRY("get_version",
            "Get firmware version.",
-           "{\"type\":\"object\"}",
+           "{\"type\":\"object\",\"properties\":{}}",
            tools_get_version_handler)
 
 // Health
 TOOL_ENTRY("get_health",
            "Get device health.",
-           "{\"type\":\"object\"}",
+           "{\"type\":\"object\",\"properties\":{}}",
            tools_get_health_handler)
 TOOL_ENTRY("get_diagnostics",
            "Get runtime diagnostics.",
@@ -124,7 +124,7 @@ TOOL_ENTRY("create_tool",
            tools_create_tool_handler)
 TOOL_ENTRY("list_user_tools",
            "List user-created tools.",
-           "{\"type\":\"object\"}",
+           "{\"type\":\"object\",\"properties\":{}}",
            tools_list_user_tools_handler)
 TOOL_ENTRY("delete_user_tool",
            "Delete a user-created tool.",
