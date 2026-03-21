@@ -167,10 +167,10 @@ def percentile(values: list[float], pct: float) -> float:
     return sorted_values[lower] * (1.0 - weight) + sorted_values[upper] * weight
 
 
-def build_request_message(base_message: str, ordinal: int, append_counter: bool) -> str:
+def build_request_message(base_message: str, sequence_number: int, append_counter: bool) -> str:
     if not append_counter:
         return base_message
-    return f"{base_message} {ordinal}"
+    return f"{base_message} {sequence_number}"
 
 
 def print_summary(title: str, values: list[float]) -> None:
@@ -369,7 +369,10 @@ def run_relay_benchmark(args: argparse.Namespace) -> list[RequestSample]:
         measured = i >= args.warmup
         phase = "measure" if measured else "warmup"
         ordinal = i - args.warmup + 1 if measured else i + 1
-        request_message = build_request_message(args.message, ordinal, args.append_counter)
+        request_sequence = i + 1
+        request_message = build_request_message(
+            args.message, request_sequence, args.append_counter
+        )
         sample = run_relay_request(args.url, request_message, args.http_timeout, api_key, ordinal)
 
         if measured:
@@ -411,7 +414,10 @@ def run_serial_benchmark(args: argparse.Namespace) -> list[RequestSample]:
             measured = i >= args.warmup
             phase = "measure" if measured else "warmup"
             ordinal = i - args.warmup + 1 if measured else i + 1
-            request_message = build_request_message(args.message, ordinal, args.append_counter)
+            request_sequence = i + 1
+            request_message = build_request_message(
+                args.message, request_sequence, args.append_counter
+            )
 
             sample, response_lines = run_serial_request(
                 ser,
