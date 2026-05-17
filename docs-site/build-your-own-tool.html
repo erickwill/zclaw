@@ -135,6 +135,7 @@ Agent: Creates a tool using the remembered lighting pin instead of asking you to
           <p class="inline-note">Example boundary: a user tool can compose <code>i2c_write_read</code> or <code>dht_read</code>, but it cannot invent a new bus or timing-sensitive sensor driver. That belongs in firmware.</p>
           <ol>
             <li>Implement handler logic in <code>main/tools_*.c</code> with signature <code>bool handler(const cJSON *input, char *result, size_t result_len)</code>.</li>
+            <li>If you created a new <code>.c</code> file, add it to the <code>SRCS</code> list in <code>main/CMakeLists.txt</code> so the build picks it up.</li>
             <li>Declare it in <code>main/tools_handlers.h</code>.</li>
             <li>Add one entry in <code>main/builtin_tools.def</code>.</li>
             <li>Add/extend host tests in <code>test/host/</code>.</li>
@@ -161,17 +162,26 @@ bool tools_relay_status_handler(const cJSON *input, char *result, size_t result_
     return true;
 }</pre>
           <ol start="2">
+            <li>Add the new source file to <code>main/CMakeLists.txt</code> (skip if you extended an existing <code>tools_*.c</code>).</li>
+          </ol>
+          <pre>idf_component_register(
+    SRCS
+        ...
+        "tools_relay.c"
+        ...
+)</pre>
+          <ol start="3">
             <li>Declare the handler in <code>main/tools_handlers.h</code>.</li>
           </ol>
           <pre>bool tools_relay_status_handler(const cJSON *input, char *result, size_t result_len);</pre>
-          <ol start="3">
+          <ol start="4">
             <li>Register it in <code>main/builtin_tools.def</code> so the model can discover and call it.</li>
           </ol>
           <pre>TOOL_ENTRY("relay_status",
            "Get relay health from host web relay.",
            "{\"type\":\"object\",\"properties\":{}}",
            tools_relay_status_handler)</pre>
-          <ol start="4">
+          <ol start="5">
             <li>Add host coverage in <code>test/host/</code> for input validation and expected output shape.</li>
             <li>Build and run through the normal firmware flow.</li>
           </ol>

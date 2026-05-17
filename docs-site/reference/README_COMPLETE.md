@@ -399,13 +399,24 @@ bool tools_relay_status_handler(const cJSON *input, char *result, size_t result_
 }
 ```
 
-2. Declare it in `main/tools_handlers.h`:
+2. Add the new source file to `main/CMakeLists.txt` (skip if you extended an existing `tools_*.c`):
+
+```cmake
+idf_component_register(
+    SRCS
+        ...
+        "tools_relay.c"
+        ...
+)
+```
+
+3. Declare it in `main/tools_handlers.h`:
 
 ```c
 bool tools_relay_status_handler(const cJSON *input, char *result, size_t result_len);
 ```
 
-3. Register it in `main/builtin_tools.def`:
+4. Register it in `main/builtin_tools.def`:
 
 ```c
 TOOL_ENTRY("relay_status",
@@ -414,8 +425,8 @@ TOOL_ENTRY("relay_status",
            tools_relay_status_handler)
 ```
 
-4. Add host tests in `test/host/` for validation and output shape.
-5. Run the normal firmware flow:
+5. Add host tests in `test/host/` for validation and output shape.
+6. Run the normal firmware flow:
 
 ```bash
 ./scripts/test.sh host
